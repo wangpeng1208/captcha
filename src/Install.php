@@ -1,105 +1,73 @@
 <?php
-/**
- * 插件安装类
- * @author wangpeng1208
- */
-declare(strict_types=1);
-
 namespace Wangpeng1208\Captcha;
 
 class Install
 {
+    const WEBMAN_PLUGIN = true;
+
     /**
-     * 安装
+     * @var array
+     */
+    protected static $pathRelation = [
+        'config/plugin/wangpeng1208/captcha' => 'config/plugin/wangpeng1208/captcha',
+    ];
+
+    /**
+     * Install
      * @return void
      */
     public static function install()
     {
-        static::installByRelativePath('config/plugin/wangpeng1208/captcha');
+        static::installByRelation();
     }
 
     /**
-     * 卸载
+     * Uninstall
      * @return void
      */
     public static function uninstall()
     {
-        static::uninstallByRelativePath('config/plugin/wangpeng1208/captcha');
+        self::uninstallByRelation();
     }
 
     /**
-     * 通过相对路径复制文件
-     * @param string $relativePath
+     * installByRelation
      * @return void
      */
-    protected static function installByRelativePath($relativePath)
+    public static function installByRelation()
     {
-        $source = __DIR__ . "/../$relativePath";
-        
-        if (!is_dir($source)) {
-            return;
-        }
-        
-        $destination = base_path() . "/$relativePath";
-        
-        // 创建目录
-        if (!is_dir($destination)) {
-            mkdir($destination, 0755, true);
-        }
-        
-        // 复制文件和目录
-        $dir_iterator = new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS);
-        $iterator = new \RecursiveIteratorIterator($dir_iterator, \RecursiveIteratorIterator::SELF_FIRST);
-        
-        foreach ($iterator as $item) {
-            if ($item->isDir()) {
-                $targetPath = $destination . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
-                if (!is_dir($targetPath)) {
-                    mkdir($targetPath, 0755, true);
+        foreach (static::$pathRelation as $source => $dest) {
+            if ($pos = strrpos($dest, '/')) {
+                $parent_dir = base_path() . '/' . substr($dest, 0, $pos);
+                if (!is_dir($parent_dir)) {
+                    mkdir($parent_dir, 0777, true);
                 }
-            } else {
-                copy($item, $destination . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
             }
+            //symlink(__DIR__ . "/$source", base_path()."/$dest");
+            copy_dir(__DIR__ . "/$source", base_path() . "/$dest");
+            echo "Create $dest
+";
         }
     }
 
     /**
-     * 通过相对路径删除文件
-     * @param string $relativePath
+     * uninstallByRelation
      * @return void
      */
-    protected static function uninstallByRelativePath($relativePath)
+    public static function uninstallByRelation()
     {
-        $path = base_path() . "/$relativePath";
-        
-        if (!is_dir($path)) {
-            return;
-        }
-        
-        static::removeDir($path);
-    }
-
-    /**
-     * 递归删除目录
-     * @param string $path
-     * @return bool
-     */
-    protected static function removeDir($path)
-    {
-        $files = scandir($path);
-        
-        foreach ($files as $file) {
-            if ($file !== '.' && $file !== '..') {
-                $fullPath = $path . DIRECTORY_SEPARATOR . $file;
-                
-                if (is_dir($fullPath)) {
-                    static::removeDir($fullPath);
-                } else {
-                    unlink($fullPath);
-                }
+        foreach (static::$pathRelation as $source => $dest) {
+            $path = base_path() . "/$dest";
+            if (!is_dir($path) && !is_file($path)) {
+                continue;
             }
+            echo "Remove $dest
+";
+            if (is_file($path) || is_link($path)) {
+                unlink($path);
+                continue;
+            }
+            remove_dir($path);
         }
-        
-        return rmdir($path);
     }
-} 
+}
