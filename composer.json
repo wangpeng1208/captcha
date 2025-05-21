@@ -1,0 +1,26 @@
+{
+    "name": "wangpeng1208/captcha",
+    "type": "library",
+    "license": "MIT",
+    "description": "基于webman的现代化验证码库，支持多种存储后端",
+    "authors": [
+        {
+            "name": "wangpeng1208",
+            "email": "990504278@qq.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "ext-gd": "*",
+        "ext-mbstring": "*",
+        "webman/cache": "^2.1",
+        "workerman/webman-framework": "^2.1 || dev-master"
+    },
+    "prefer-stable": true,
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Wangpeng1208\\Captcha\\": "src/"
+        }
+    }
+} 
