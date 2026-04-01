@@ -1,6 +1,6 @@
 # wangpeng1208/captcha
 
-基于 tinywan/captcha 修改而来，支持 Cache 多种存储后端。
+适用于Webman的图形验证码库。基于 tinywan/captcha 修改而来，支持 Cache 多种存储后端。
 
 ## 环境要求
 

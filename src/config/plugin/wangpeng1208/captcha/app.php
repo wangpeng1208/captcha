@@ -3,7 +3,7 @@ return [
     'enable' => true,
     'captcha' => [
         // 验证码存储key前缀
-        'prefix'  => 'captcha:',
+        'prefix'  => 'captcha',
         // 验证码字符集合
         'codeSet'  => 'ABCDEFGHJKLMNPQRTUVWXY2345678abcdefhijkmnpqrstuvwxyz',
         // 是否使用中文验证码

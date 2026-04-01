@@ -71,22 +71,7 @@ class Captcha
         // 验证码字体随机颜色
         $color = imagecolorallocate($im, mt_rand(1, 150), mt_rand(1, 150), mt_rand(1, 150));
 
-        // 验证码使用随机字体
-        $ttfPath = dirname(__DIR__) . '/assets/' . ($config['useZh'] ? 'zhttfs' : 'ttfs') . '/';
-
-        if (empty($config['fontttf'])) {
-            $dir = dir($ttfPath);
-            $ttfs = [];
-            while (false !== ($file = $dir->read())) {
-                if (substr($file, -4) == '.ttf' || substr($file, -4) == '.otf') {
-                    $ttfs[] = $file;
-                }
-            }
-            $dir->close();
-            $config['fontttf'] = $ttfs[array_rand($ttfs)];
-        }
-
-        $fontttf = $ttfPath . $config['fontttf'];
+        $fontttf = self::resolveFontFile($config);
 
         if ($config['useImgBg']) {
             self::background($config, $im);
@@ -124,6 +109,86 @@ class Captcha
     }
 
     /**
+     * 解析验证码字体文件路径
+     * @param array $config
+     * @return string
+     * @throws Exception
+     */
+    protected static function resolveFontFile(array &$config): string
+    {
+        $ttfPath = dirname(__DIR__) . '/assets/' . ($config['useZh'] ? 'zhttfs' : 'ttfs') . '/';
+
+        if (empty($config['fontttf'])) {
+            $dir = dir($ttfPath);
+            $ttfs = [];
+            while (false !== ($file = $dir->read())) {
+                if (substr($file, -4) === '.ttf' || substr($file, -4) === '.otf') {
+                    $ttfs[] = $file;
+                }
+            }
+            $dir->close();
+
+            if (empty($ttfs)) {
+                throw new Exception('Captcha font file not found.');
+            }
+
+            $config['fontttf'] = $ttfs[array_rand($ttfs)];
+        }
+
+        $fontttf = $config['fontttf'];
+        if (!self::isAbsolutePath($fontttf)) {
+            $fontttf = $ttfPath . ltrim($fontttf, '/\\');
+        }
+
+        $fontttf = realpath($fontttf) ?: $fontttf;
+        if (!is_file($fontttf)) {
+            throw new Exception(sprintf('Captcha font file not found: %s', $fontttf));
+        }
+
+        return self::normalizeFontPath($fontttf);
+    }
+
+    /**
+     * 修正 GD 在 Windows 下无法读取中文路径字体的问题
+     * @param string $fontttf
+     * @return string
+     */
+    protected static function normalizeFontPath(string $fontttf): string
+    {
+        if (DIRECTORY_SEPARATOR !== '\\') {
+            return $fontttf;
+        }
+
+        if (!preg_match('/[^\x20-\x7E]/', $fontttf)) {
+            return $fontttf;
+        }
+
+        $tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'wangpeng1208-captcha-fonts';
+        if (!is_dir($tempDir)) {
+            @mkdir($tempDir, 0777, true);
+        }
+
+        $extension = pathinfo($fontttf, PATHINFO_EXTENSION) ?: 'ttf';
+        $tempFont = $tempDir . DIRECTORY_SEPARATOR . md5($fontttf . '|' . (string)@filemtime($fontttf) . '|' . (string)@filesize($fontttf)) . '.' . $extension;
+
+        if (!is_file($tempFont)) {
+            @copy($fontttf, $tempFont);
+        }
+
+        return is_file($tempFont) ? $tempFont : $fontttf;
+    }
+
+    /**
+     * 判断路径是否为绝对路径
+     * @param string $path
+     * @return bool
+     */
+    protected static function isAbsolutePath(string $path): bool
+    {
+        return (bool)preg_match('/^(?:[A-Za-z]:[\\\\\\/]|[\\\\\\/]{2}|\/)/', $path);
+    }
+
+    /**
      * 创建验证码
      * @param array $config 配置
      * @return array
@@ -153,15 +218,15 @@ class Captcha
             $key = mb_strtolower($bag, 'UTF-8');
         }
 
-        $hash = password_hash($key, PASSWORD_BCRYPT, ['cost' => 10]);
-        
+        $captchaKey = md5($key . uniqid('', true));
+        $hash = password_hash($key, PASSWORD_DEFAULT);
         // 使用 Cache 保存验证码
-        $cacheKey = $config['prefix'] . $hash;
+        $cacheKey = $config['prefix'] . $captchaKey;
         $expireTime = $config['expire'] ?? 60;
         
         Cache::set($cacheKey, ['key' => $hash], $expireTime);
         
-        return ['value' => $bag, 'key' => $hash];
+        return ['value' => $bag, 'key' => $captchaKey];
     }
 
     /**
@@ -282,4 +347,4 @@ class Captcha
         
         @imagedestroy($bgImage);
     }
-} 
+}
