@@ -2,6 +2,8 @@
 return [
     'enable' => true,
     'captcha' => [
+        // 验证码静态资源目录（包含 bgs/ ttfs/ zhttfs/）
+        'assets_path' => public_path() . '/static/wangpeng1208/captcha',
         // 验证码存储key前缀
         'prefix'  => 'captcha',
         // 验证码字符集合

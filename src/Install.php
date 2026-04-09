@@ -10,6 +10,7 @@ class Install
      */
     protected static $pathRelation = [
         'config/plugin/wangpeng1208/captcha' => 'config/plugin/wangpeng1208/captcha',
+        '../assets' => 'public/static/wangpeng1208/captcha',
     ];
 
     /**

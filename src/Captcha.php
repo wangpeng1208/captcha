@@ -116,7 +116,7 @@ class Captcha
      */
     protected static function resolveFontFile(array &$config): string
     {
-        $ttfPath = dirname(__DIR__) . '/assets/' . ($config['useZh'] ? 'zhttfs' : 'ttfs') . '/';
+        $ttfPath = self::resolveAssetsDirectory($config, $config['useZh'] ? 'zhttfs' : 'ttfs');
 
         if (empty($config['fontttf'])) {
             $dir = dir($ttfPath);
@@ -146,6 +146,52 @@ class Captcha
         }
 
         return self::normalizeFontPath($fontttf);
+    }
+
+    /**
+     * 获取验证码静态资源根目录
+     * @param array $config
+     * @return string
+     */
+    protected static function getAssetsPath(array $config): string
+    {
+        if (!empty($config['assets_path']) && is_string($config['assets_path'])) {
+            $path = $config['assets_path'];
+        } else {
+            $path = function_exists('public_path')
+                ? \public_path() . '/static/wangpeng1208/captcha'
+                : dirname(__DIR__) . '/assets';
+        }
+
+        $path = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path), DIRECTORY_SEPARATOR);
+
+        return $path !== '' ? $path : dirname(__DIR__) . '/assets';
+    }
+
+    /**
+     * 获取验证码静态资源子目录
+     * 优先读取配置目录，不存在时回退 vendor 目录
+     * @param array $config
+     * @param string $subdir
+     * @return string
+     * @throws Exception
+     */
+    protected static function resolveAssetsDirectory(array $config, string $subdir): string
+    {
+        $subdir = trim($subdir, '/\\');
+        $candidates = [
+            self::getAssetsPath($config) . DIRECTORY_SEPARATOR . $subdir,
+            dirname(__DIR__) . '/assets/' . $subdir,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $path = realpath($candidate) ?: $candidate;
+            if (is_dir($path)) {
+                return rtrim($path, '/\\') . DIRECTORY_SEPARATOR;
+            }
+        }
+
+        throw new Exception(sprintf('Captcha assets directory not found: %s', $candidates[0]));
     }
 
     /**
@@ -314,10 +360,11 @@ class Captcha
      * 注：如果验证码输出图片比较大，将占用比较多的系统资源
      * @param array $config
      * @param $im
+     * @throws Exception
      */
     protected static function background(array $config, $im): void
     {
-        $path = dirname(__DIR__) . '/assets/bgs/';
+        $path = self::resolveAssetsDirectory($config, 'bgs');
         $dir = dir($path);
 
         $bgs = [];
@@ -327,6 +374,10 @@ class Captcha
             }
         }
         $dir->close();
+
+        if (empty($bgs)) {
+            throw new Exception(sprintf('Captcha background image not found: %s', $path));
+        }
 
         $gb = $bgs[array_rand($bgs)];
 
